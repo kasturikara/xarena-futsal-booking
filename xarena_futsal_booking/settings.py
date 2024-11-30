@@ -131,3 +131,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # auth
 AUTH_USER_MODEL = 'xarena_app.CustomUser'
+
+# login url
+LOGIN_URL = 'login'
