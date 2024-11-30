@@ -35,6 +35,31 @@
             >About</a
           >
         </li>
+        {% if user.is_authenticated %} {% if user.is_superuser %}
+        <li class="nav-item">
+          <a
+            class="nav-link {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}"
+            href="{% url 'dashboard_admin' %}"
+            >Dashboard</a
+          >
+        </li>
+        {% elif user.is_staff %}
+        <li class="nav-item">
+          <a
+            class="nav-link {% if request.resolver_match.url_name == 'dashboard_staff' %}active{% endif %}"
+            href="{% url 'dashboard_staff' %}"
+            >Dashboard</a
+          >
+        </li>
+        {% else %}
+        <li class="nav-item">
+          <a
+            class="nav-link {% if request.resolver_match.url_name == 'dashboard_user' %}active{% endif %}"
+            href="{% url 'dashboard_user' %}"
+            >Dashboard</a
+          >
+        </li>
+        {% endif %} {% endif %}
       </ul>
 
       <div class="d-flex gap-3 justify-content-center">
