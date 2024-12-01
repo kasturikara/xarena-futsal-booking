@@ -1,0 +1,48 @@
+{% extends "../base.html" %} {% block content %}
+<div class="container py-5">
+  <div class="row">
+    <div class="col-md-6">
+      {% if lapangan.gambar %}
+      <img
+        src="{{ lapangan.gambar.url }}"
+        class="img-fluid rounded"
+        style="max-height: 30vh"
+        alt="{{ lapangan.nama }}"
+      />
+      {% endif %}
+    </div>
+    <div class="col-md-6">
+      <h2>{{ lapangan.nama }}</h2>
+      <p>{{ lapangan.deskripsi }}</p>
+      <p><strong>Harga per jam:</strong> Rp {{ lapangan.harga_per_jam }}</p>
+    </div>
+  </div>
+
+  <div class="mt-5">
+    <h3>Jadwal Tersedia</h3>
+    <div class="row">
+      {% for date in dates %}
+      <div class="col-md-4 mb-4">
+        <div class="card">
+          <div class="card-header">{{ date.date|date:"l, d M Y" }}</div>
+          <div class="card-body">
+            {% if date.slots %} {% for slot in date.slots %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>{{ slot.jam_mulai }} - {{ slot.jam_selesai }}</span>
+              <a
+                href="{% url 'konfirmasi_pemesanan' slot.id %}"
+                class="btn btn-sm btn-success"
+                >Pesan</a
+              >
+            </div>
+            {% endfor %} {% else %}
+            <p class="text-muted">Tidak ada slot tersedia</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

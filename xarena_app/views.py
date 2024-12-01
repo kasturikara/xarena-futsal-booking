@@ -1,10 +1,16 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from .models import CustomUser, Pemesanan
+from django.urls import reverse_lazy
+from django.views.generic import CreateView , DetailView, ListView
+from django.shortcuts import get_object_or_404
+from .models import CustomUser, Lapangan, Jadwal, Pemesanan
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
+from datetime import datetime, timedelta
+
 
 # tampilan register
 def register_view(request):
@@ -53,7 +59,7 @@ def login_view(request):
                 messages.error(request, 'Username atau password tidak valid.')
                 form.add_error(None, 'Username atau password tidak valid.')
         else:
-            messages.error(request, 'Betulkan error dibawah ini.')
+            messages.error(request, 'Username atau password tidak valid.')
     else:
         form = CustomAuthenticationForm()
     
@@ -99,6 +105,110 @@ def dashboard_user(request):
     }
     
     return render(request, 'user/dashboard_user.html', context)
+
+# list lapangan
+class LapanganListView(ListView):
+    model = Lapangan
+    template_name = 'public/list_lapangan.html'
+    context_object_name = 'lapangan'
+    
+    def get_queryset(self):
+        return Lapangan.objects.all()
+        # return Lapangan.objects.all().filter(is_available=True)
+
+# detail lapangan
+class DetailLapanganView(LoginRequiredMixin, DetailView):
+    model = Lapangan
+    template_name = 'user/detail_lapangan.html'
+    pk_url_kwarg = 'lapangan_id'
+    context_object_name = 'lapangan'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        dates = []
+        
+        # Get all unique dates from Jadwal
+        jadwal_dates = Jadwal.objects.filter(
+            lapangan=self.object,
+            # is_available=True
+        ).dates('tanggal', 'day')
+
+        for date in jadwal_dates:
+            jadwal = Jadwal.objects.filter(
+                lapangan=self.object,
+                tanggal=date,
+                # is_available=True
+            )
+            dates.append({
+                'date': date,
+                'slots': jadwal
+            })
+            
+        context['dates'] = dates
+        return context
+
+# pesan lapangan
+class PemesananCreateView(LoginRequiredMixin, CreateView):
+    model = Pemesanan
+    template_name = "user/konfirmasi_pemesanan.html"
+    fields = ['metode_pembayaran']
+    success_url = reverse_lazy('dashboard_user')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        jadwal = get_object_or_404(Jadwal, id=self.kwargs['jadwal_id'])
+
+        # buat temp pemesanan untuk hitung harga
+        temp_pemesanan = Pemesanan(jadwal=jadwal)
+        harga = temp_pemesanan.hitung_harga()
+
+        context.update({
+            'jadwal': jadwal,
+            'lapangan': jadwal.lapangan,
+            'harga': harga
+        })
+        return context
+    
+    def form_valid(self, form):
+        jadwal = get_object_or_404(Jadwal, id=self.kwargs['jadwal_id'])
+        if not jadwal.is_available:
+            messages.error(self.request, 'Jadwal tidak tersedia.')
+            return self.form_invalid(form)
+
+        form.instance.user = self.request.user
+        form.instance.jadwal = jadwal
+        jadwal.is_available = False
+        jadwal.save()
+        
+        messages.success(self.request, 'Pemesanan berhasil dibuat.')
+        return super().form_valid(form)
+
+# cancel pesanan
+# views.py
+@login_required
+def cancel_pemesanan(request, pemesanan_id):
+    pemesanan = get_object_or_404(Pemesanan, id=pemesanan_id, user=request.user)
+    
+    # Only allow cancellation of pending orders
+    if pemesanan.status != 'pending':
+        messages.error(request, 'Hanya pemesanan dengan status pending yang dapat dibatalkan.')
+        return redirect('dashboard_user')
+        
+    if request.method == 'POST':
+        # Update pemesanan status
+        pemesanan.status = 'dibatalkan'
+        pemesanan.save()
+        
+        # Make jadwal available again
+        jadwal = pemesanan.jadwal
+        jadwal.is_available = True 
+        jadwal.save()
+        
+        messages.success(request, 'Pemesanan berhasil dibatalkan.')
+        return redirect('dashboard_user')
+        
+    return render(request, 'user/konfirmasi_cancel_pemesanan.html', {'pemesanan': pemesanan})
+
 
 
 # -----STAFF-----

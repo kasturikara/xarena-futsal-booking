@@ -21,20 +21,6 @@
 
     <div class="collapse navbar-collapse text-center" id="navbarNav">
       <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a
-            class="nav-link {% if request.resolver_match.url_name == 'landing' %}active{% endif %}"
-            href="{% url 'landing' %}"
-            >Home</a
-          >
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}"
-            href="{% url 'about' %}"
-            >About</a
-          >
-        </li>
         {% if user.is_authenticated %} {% if user.is_superuser %}
         <li class="nav-item">
           <a
@@ -60,6 +46,27 @@
           >
         </li>
         {% endif %} {% endif %}
+        <li class="nav-item">
+          <a
+            class="nav-link {% if request.resolver_match.url_name == 'landing' %}active{% endif %}"
+            href="{% url 'landing' %}"
+            >Home</a
+          >
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}"
+            href="{% url 'about' %}"
+            >About</a
+          >
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link {% if request.resolver_match.url_name == 'list_lapangan' or request.resolver_match.url_name == 'detail_lapangan' %}active{% endif %}"
+            href="{% url 'list_lapangan' %}"
+            >Lapangan</a
+          >
+        </li>
       </ul>
 
       <div class="d-flex gap-3 justify-content-center">

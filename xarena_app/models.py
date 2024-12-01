@@ -1,8 +1,8 @@
-from datetime import timedelta
-
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from datetime import timedelta
+from decimal import Decimal
 
 
 # custom user model
@@ -91,7 +91,7 @@ class Pemesanan(models.Model):
         ) - timedelta(
             hours=self.jadwal.jam_mulai.hour, minutes=self.jadwal.jam_mulai.minute
         )
-        total_jam = durasi.total_seconds() / 3600
+        total_jam = Decimal(str(durasi.total_seconds() / 3600))
         return self.jadwal.lapangan.harga_per_jam * total_jam
 
     def __str__(self):
