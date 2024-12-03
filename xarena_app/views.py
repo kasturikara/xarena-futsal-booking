@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -320,27 +321,238 @@ def add_pemesanan(request):
     
     return HttpResponseNotAllowed(['POST'])
     
+    
 # -----ADMIN-----
 @login_required
 def dashboard_admin(request):
     if not request.user.is_superuser:
         raise PermissionDenied
 
-    # Example data for admin dashboard
-    pemesanan = Pemesanan.objects.all()
-    total_pemesanan = pemesanan.count()
-    pending_pemesanan = pemesanan.filter(status='pending').count()
-    completed_pemesanan = pemesanan.filter(status='selesai').count()
-    total_users = CustomUser.objects.count()
-    total_staff = CustomUser.objects.filter(is_staff=True).count()
+    pemesanan_list = Pemesanan.objects.all().order_by('-created_at')
+    paginator = Paginator(pemesanan_list, 10)
+    
+    page = request.GET.get('page')
+    pemesanan = paginator.get_page(page)
 
     context = {
         'pemesanan': pemesanan,
-        'total_pemesanan': total_pemesanan,
-        'pending_pemesanan': pending_pemesanan,
-        'completed_pemesanan': completed_pemesanan,
-        'total_users': total_users,
-        'total_staff': total_staff,
+        'total_users': CustomUser.objects.filter(is_staff=False, is_superuser=False).count(),
+        'total_staff': CustomUser.objects.filter(is_staff=True).count(),
+        'total_pemesanan': pemesanan_list.count(),
+        'pending_pemesanan': pemesanan_list.filter(status='pending').count(),
     }
     
     return render(request, 'admin/dashboard_admin.html', context)
+
+# manage lapangan
+class ManageLapanganView(LoginRequiredMixin, ListView):
+    model = Lapangan
+    template_name = 'admin/manage_lapangan.html'
+    context_object_name = 'lapangan'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+    
+# add lapangan
+@login_required
+def add_lapangan(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+        
+    if request.method == 'POST':
+        nama = request.POST.get('nama')
+        deskripsi = request.POST.get('deskripsi')
+        harga_per_jam = request.POST.get('harga_per_jam')
+        gambar = request.FILES.get('gambar')
+        
+        lapangan = Lapangan.objects.create(
+            nama=nama,
+            deskripsi=deskripsi,
+            harga_per_jam=harga_per_jam,
+            gambar=gambar
+        )
+        messages.success(request, 'Lapangan berhasil ditambahkan')
+        return redirect('manage_lapangan')
+        
+    return HttpResponseNotAllowed(['POST'])
+
+# edit lapangan
+@login_required
+def edit_lapangan(request, pk):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+        
+    lapangan = get_object_or_404(Lapangan, pk=pk)
+    
+    if request.method == 'POST':
+        lapangan.nama = request.POST.get('nama')
+        lapangan.deskripsi = request.POST.get('deskripsi')
+        lapangan.harga_per_jam = request.POST.get('harga_per_jam')
+        
+        if 'gambar' in request.FILES:
+            lapangan.gambar = request.FILES['gambar']
+            
+        lapangan.save()
+        messages.success(request, 'Lapangan berhasil diupdate')
+        return redirect('manage_lapangan')
+        
+    return HttpResponseNotAllowed(['POST'])
+
+# delete lapangan
+@login_required
+def delete_lapangan(request, pk):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+        
+    lapangan = get_object_or_404(Lapangan, pk=pk)
+    lapangan.delete()
+    messages.success(request, 'Lapangan berhasil dihapus')
+    return redirect('manage_lapangan')
+
+# manage jadwal
+def manage_jadwal(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+    
+    # filter
+    lapangan_id = request.GET.get('lapangan')
+    month = request.GET.get('month')
+
+    jadwal_list = Jadwal.objects.all()
+    
+    if lapangan_id:
+        jadwal_list = jadwal_list.filter(lapangan_id=lapangan_id)
+        
+    if month:
+        jadwal_list = jadwal_list.filter(tanggal__month=month)
+        
+    # group jadwal by date
+    dates = {}
+    for jadwal in jadwal_list.order_by('tanggal', 'jam_mulai'):
+        if jadwal.tanggal not in dates:
+            dates[jadwal.tanggal] = []
+        dates[jadwal.tanggal].append(jadwal)
+        
+    # sort by date
+    sorted_dates = sorted(dates.items())
+    
+    # pagination
+    paginator = Paginator(sorted_dates, 7)
+    page = request.GET.get('page')
+    dates_page = paginator.get_page(page)
+    
+    month_choices = [
+        (1, 'Januari'),
+        (2, 'Februari'), 
+        (3, 'Maret'),
+        (4, 'April'),
+        (5, 'Mei'),
+        (6, 'Juni'),
+        (7, 'Juli'),
+        (8, 'Agustus'),
+        (9, 'September'),
+        (10, 'Oktober'),
+        (11, 'November'),
+        (12, 'Desember')
+    ]
+    
+    context = {
+        'dates': dates_page,
+        'lapangan': Lapangan.objects.all(),
+        'selected_lapangan': lapangan_id,
+        'selected_month': month,
+        'months': month_choices,
+    }
+    return render(request, 'admin/manage_jadwal.html', context)
+
+# generate jadwal
+@login_required 
+def generate_jadwal(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        try:
+            # Get form data
+            lapangan_id = request.POST.get('lapangan')
+            tanggal_mulai = request.POST.get('tanggal_mulai')
+            tanggal_selesai = request.POST.get('tanggal_selesai')
+            jam_mulai = request.POST.get('jam_mulai')
+            jam_selesai = request.POST.get('jam_selesai')
+            durasi = request.POST.get('durasi')
+
+            # Validate durasi
+            try:
+                durasi = int(durasi)
+                if durasi < 30 or durasi % 30 != 0:
+                    raise ValueError("Durasi harus kelipatan 30 menit")
+            except ValueError as e:
+                messages.error(request, str(e))
+                return redirect('manage_jadwal')
+
+            # Process data
+            lapangan = Lapangan.objects.get(id=lapangan_id)
+            start_date = datetime.strptime(tanggal_mulai, '%Y-%m-%d').date()
+            end_date = datetime.strptime(tanggal_selesai, '%Y-%m-%d').date()
+            start_time = datetime.strptime(jam_mulai, '%H:%M').time()
+            end_time = datetime.strptime(jam_selesai, '%H:%M').time()
+            
+            current_date = start_date
+            while current_date <= end_date:
+                current_time = datetime.combine(current_date, start_time) 
+                end_datetime = datetime.combine(current_date, end_time)
+                
+                while current_time < end_datetime:
+                    next_time = current_time + timedelta(minutes=durasi) # Now using integer
+                    if next_time.time() <= end_time:
+                        Jadwal.objects.create(
+                            lapangan=lapangan,
+                            tanggal=current_date,
+                            jam_mulai=current_time.time(),
+                            jam_selesai=next_time.time()
+                        )
+                    current_time = next_time
+                current_date += timedelta(days=1)
+                
+            messages.success(request, 'Jadwal berhasil dibuat')
+            
+        except ValueError as e:
+            messages.error(request, f'Error format input: {str(e)}')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+            
+        return redirect('manage_jadwal')
+    
+    return HttpResponseNotAllowed(['POST'])
+
+# edit jadwal
+@login_required
+def edit_jadwal(request, pk):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+    
+    jadwal = get_object_or_404(Jadwal, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            tanggal = request.POST.get('tanggal')
+            jam_mulai = request.POST.get('jam_mulai') 
+            jam_selesai = request.POST.get('jam_selesai')
+            is_available = request.POST.get('is_available') == 'True'
+
+            jadwal.tanggal = tanggal
+            jadwal.jam_mulai = jam_mulai
+            jadwal.jam_selesai = jam_selesai
+            jadwal.is_available = is_available
+            jadwal.save()
+            
+            messages.success(request, 'Jadwal berhasil diupdate')
+            
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+            
+        return redirect('manage_jadwal')
+        
+    return HttpResponseNotAllowed(['POST'])

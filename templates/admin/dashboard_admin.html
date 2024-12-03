@@ -1,11 +1,11 @@
-{% extends '../base.html' %} {% load static %} {% block content %}
+{% extends './base_admin.html' %} {% load static %} {% block admin_content %}
 <div class="container-fluid mt-4">
   <!-- Header -->
   <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Admin Dashboard</h1>
   </div>
 
-  <!-- Statistics Cards -->
+  <!-- statistic cards -->
   <div class="row">
     <div class="col-xl-3 col-md-6 mb-4">
       <div class="card border-left-primary shadow h-100 py-2">
@@ -22,7 +22,7 @@
               </div>
             </div>
             <div class="col-auto">
-              <i class="fas fa-users fa-2x text-gray-300"></i>
+              <i class="ri-user-line ri-2x text-gray-300"></i>
             </div>
           </div>
         </div>
@@ -44,7 +44,7 @@
               </div>
             </div>
             <div class="col-auto">
-              <i class="fas fa-user-tie fa-2x text-gray-300"></i>
+              <i class="ri-user-star-line ri-2x text-gray-300"></i>
             </div>
           </div>
         </div>
@@ -66,7 +66,7 @@
               </div>
             </div>
             <div class="col-auto">
-              <i class="fas fa-clock fa-2x text-gray-300"></i>
+              <i class="ri-time-line ri-2x text-gray-300"></i>
             </div>
           </div>
         </div>
@@ -88,7 +88,7 @@
               </div>
             </div>
             <div class="col-auto">
-              <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+              <i class="ri-shopping-cart-2-line ri-2x text-gray-300"></i>
             </div>
           </div>
         </div>
@@ -96,23 +96,7 @@
     </div>
   </div>
 
-  <!-- Quick Actions -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card shadow">
-        <div class="card-header py-3">
-          <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
-        </div>
-        <div class="card-body">
-          <a href="#" class="btn btn-primary mr-2">Manage Users</a>
-          <a href="#" class="btn btn-success mr-2">Manage Staff</a>
-          <a href="#" class="btn btn-info">View Reports</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recent Orders Table -->
+  <!-- table pemesanan -->
   <div class="card shadow mb-4">
     <div class="card-header py-3">
       <h6 class="m-0 font-weight-bold text-primary">Recent Orders</h6>
@@ -122,7 +106,7 @@
         <table class="table table-bordered" width="100%" cellspacing="0">
           <thead>
             <tr>
-              <th>Order ID</th>
+              <th>#</th>
               <th>User</th>
               <th>Date</th>
               <th>Status</th>
@@ -132,14 +116,14 @@
           <tbody>
             {% for item in pemesanan %}
             <tr>
-              <td>{{ item.id }}</td>
+              <td>{{ forloop.counter }}</td>
               <td>{{ item.user.username }}</td>
               <td>{{ item.created_at|date:"d/m/Y" }}</td>
               <td>
                 <span
-                  class="badge {% if item.status == 'pending' %}bg-warning{% else %}bg-success{% endif %}"
+                  class="badge {% if item.status == 'pending' %} bg-warning {% elif item.status == 'diterima' %} bg-info {% elif item.status == 'dibatalkan' %} bg-danger {% else %} bg-success {% endif %}"
                 >
-                  {{ item.status }}
+                  {{ item.status|capfirst }}
                 </span>
               </td>
               <td>
@@ -150,6 +134,45 @@
             {% endfor %}
           </tbody>
         </table>
+
+        <!-- Pagination -->
+      {% if pemesanan.has_other_pages %}
+      <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+          {% if pemesanan.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ pemesanan.previous_page_number }}">&laquo;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&laquo;</span>
+            </li>
+          {% endif %}
+
+          {% for i in pemesanan.paginator.page_range %}
+            {% if pemesanan.number == i %}
+              <li class="page-item active">
+                <span class="page-link">{{ i }}</span>
+              </li>
+            {% else %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if pemesanan.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ pemesanan.next_page_number }}">&raquo;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&raquo;</span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
       </div>
     </div>
   </div>

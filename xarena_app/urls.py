@@ -28,6 +28,14 @@ urlpatterns = [
 
     # admin
     path('adm/dashboard/', views.dashboard_admin, name='dashboard_admin'),
+    path('adm/lapangan/', views.ManageLapanganView.as_view(), name='manage_lapangan'),
+    path('adm/lapangan/add/', views.add_lapangan, name='add_lapangan'),
+    path('adm/lapangan/<int:pk>/edit/', views.edit_lapangan, name='edit_lapangan'),
+    path('adm/lapangan/<int:pk>/delete/', views.delete_lapangan, name='delete_lapangan'),
+    
+    path('adm/jadwal/', views.manage_jadwal, name='manage_jadwal'),
+    path('adm/jadwal/generate/', views.generate_jadwal, name='generate_jadwal'),
+    path('adm/jadwal/<int:pk>/edit/', views.edit_jadwal, name='edit_jadwal'),
 
     # api
     path('api/jadwal/', views.get_available_jadwal, name='get_jadwal'),
