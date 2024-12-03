@@ -21,7 +21,14 @@ urlpatterns = [
     
     # staff
     path('staff/dashboard/', views.dashboard_staff, name='dashboard_staff'),
+    path('staff/pemesanan/<int:pk>/', views.detail_pemesanan_staff, name='detail_pemesanan_staff'),
+    path('staff/pemesanan/<int:pk>/update/', views.update_pemesanan, name='update_pemesanan'),
+    
+    path('pemesanan/add/', views.add_pemesanan, name='add_pemesanan'),
 
     # admin
     path('adm/dashboard/', views.dashboard_admin, name='dashboard_admin'),
+
+    # api
+    path('api/jadwal/', views.get_available_jadwal, name='get_jadwal'),
 ]

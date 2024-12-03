@@ -1,15 +1,16 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy
 from django.views.generic import CreateView , DetailView, ListView
-from django.shortcuts import get_object_or_404
+from django.http import HttpResponseNotAllowed, JsonResponse
+from django.core.paginator import Paginator
 from .models import CustomUser, Lapangan, Jadwal, Pemesanan
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
-from datetime import datetime, timedelta
 
 
 # tampilan register
@@ -184,7 +185,6 @@ class PemesananCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 # cancel pesanan
-# views.py
 @login_required
 def cancel_pemesanan(request, pemesanan_id):
     pemesanan = get_object_or_404(Pemesanan, id=pemesanan_id, user=request.user)
@@ -212,26 +212,113 @@ def cancel_pemesanan(request, pemesanan_id):
 
 
 # -----STAFF-----
-@login_required
+@staff_member_required
 def dashboard_staff(request):
-    if not request.user.is_staff:
-        raise PermissionDenied
+    pemesanan_list = Pemesanan.objects.all().order_by('-created_at')
+    paginator = Paginator(pemesanan_list, 10)
+    
+    users = CustomUser.objects.filter(
+        is_staff=False,
+        is_superuser=False
+    ).order_by('username')
+    
+    lapangan = Lapangan.objects.all()
 
-    # Example data for staff dashboard
-    pemesanan = Pemesanan.objects.all()
-    total_pemesanan = pemesanan.count()
-    pending_pemesanan = pemesanan.filter(status='pending').count()
-    completed_pemesanan = pemesanan.filter(status='selesai').count()
-
+    page = request.GET.get('page')
+    pemesanan = paginator.get_page(page)
+    
     context = {
         'pemesanan': pemesanan,
-        'total_pemesanan': total_pemesanan,
-        'pending_pemesanan': pending_pemesanan,
-        'completed_pemesanan': completed_pemesanan,
+        'users': users,
+        'lapangan': lapangan,
+        'total_pemesanan': pemesanan_list.count(),
+        'pending_pemesanan': pemesanan_list.filter(status='pending').count(),
+        'diterima_pemesanan': pemesanan_list.filter(status='diterima').count(),
+        'completed_pemesanan': pemesanan_list.filter(status='selesai').count(),
     }
     
     return render(request, 'staff/dashboard_staff.html', context)
 
+# detail pemesanan untuk staff
+@staff_member_required 
+def detail_pemesanan_staff(request, pk):
+    pemesanan = get_object_or_404(Pemesanan, pk=pk)
+    return render(request, 'staff/detail_pemesanan_staff.html', {
+        'pemesanan': pemesanan
+    })
+
+# update status pemesanan
+@login_required
+def update_pemesanan(request, pk):
+    if not request.user.is_staff or request.user.is_superuser:
+        raise PermissionDenied
+    
+    if request.method == 'POST':
+        pemesanan = get_object_or_404(Pemesanan, pk=pk)
+        status = request.POST.get('status')
+        
+        if status in ['dibatalkan', 'pending', 'diterima', 'selesai']:
+            pemesanan.status = status
+            pemesanan.staff = request.user
+            pemesanan.save()
+            messages.success(request, f'Status pemesanan oleh {pemesanan.user.username} berhasil diubah menjadi {status}.')
+        else:
+            messages.error(request, 'Status tidak valid')
+            
+        return redirect('dashboard_staff')
+        
+    return HttpResponseNotAllowed(['POST'])
+
+# ambil jadwal tersedia
+@login_required
+def get_available_jadwal(request):
+    lapangan_id = request.GET.get('lapangan')
+    tanggal = request.GET.get('tanggal')
+    
+    if not lapangan_id or not tanggal:
+        return JsonResponse([], safe=False)
+    
+    jadwal = Jadwal.objects.filter(
+        lapangan_id=lapangan_id,
+        tanggal=tanggal,
+        is_available=True
+    ).values('id', 'jam_mulai', 'jam_selesai')
+    
+    return JsonResponse(list(jadwal), safe=False)
+
+# add pemesanan
+@login_required
+def add_pemesanan(request):
+    if not request.user.is_staff or request.user.is_superuser:
+        raise PermissionDenied
+    
+    if request.method == 'POST':
+        user_id = request.POST.get('user')
+        jadwal_id = request.POST.get('jadwal')
+        metode_pembayaran = request.POST.get('metode_pembayaran')
+        
+        user = get_object_or_404(CustomUser, id=user_id, is_staff=False, is_superuser=False)
+        jadwal = get_object_or_404(Jadwal, id=jadwal_id)
+        
+        if not jadwal.is_available:
+            messages.error(request, 'Jadwal tidak tersedia.')
+            return redirect('dashboard_staff')
+        
+        pemesanan = Pemesanan.objects.create(
+            user=user,
+            jadwal=jadwal,
+            metode_pembayaran=metode_pembayaran,
+            status='diterima',
+            staff=request.user
+        )
+        
+        jadwal.is_available = False
+        jadwal.save()
+        
+        messages.success(request, f'Pemesanan oleh {user.username} berhasil dibuat.')
+        return redirect('dashboard_staff')
+    
+    return HttpResponseNotAllowed(['POST'])
     
 # -----ADMIN-----
 @login_required

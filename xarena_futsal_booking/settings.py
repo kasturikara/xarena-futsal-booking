@@ -134,3 +134,6 @@ AUTH_USER_MODEL = 'xarena_app.CustomUser'
 
 # login url
 LOGIN_URL = 'login'
+
+# messages storage
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'

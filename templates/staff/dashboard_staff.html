@@ -1,5 +1,7 @@
 {% extends '../base.html' %} {% load static %} {% block content %}
 <div class="container-fluid mt-4">
+  {% include '../components/alert_messages.html' %}
+
   <!-- Header -->
   <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Staff Dashboard</h1>
@@ -22,7 +24,7 @@
               </div>
             </div>
             <div class="col-auto">
-              <i class="fas fa-calendar fa-2x text-gray-300"></i>
+              <i class="ri-calendar-line ri-2x text-gray-300"></i>
             </div>
           </div>
         </div>
@@ -44,7 +46,29 @@
               </div>
             </div>
             <div class="col-auto">
-              <i class="fas fa-clock fa-2x text-gray-300"></i>
+              <i class="ri-time-line ri-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card border-left-info shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div
+                class="text-xs font-weight-bold text-info text-uppercase mb-1"
+              >
+                Diterima
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">
+                {{ diterima_pemesanan }}
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="ri-check-double-line ri-2x text-gray-300"></i>
             </div>
           </div>
         </div>
@@ -59,14 +83,14 @@
               <div
                 class="text-xs font-weight-bold text-success text-uppercase mb-1"
               >
-                Completed
+                Selesai
               </div>
               <div class="h5 mb-0 font-weight-bold text-gray-800">
                 {{ completed_pemesanan }}
               </div>
             </div>
             <div class="col-auto">
-              <i class="fas fa-check fa-2x text-gray-300"></i>
+              <i class="ri-checkbox-circle-line ri-2x text-gray-300"></i>
             </div>
           </div>
         </div>
@@ -77,7 +101,16 @@
   <!-- Daftar Pemesanan -->
   <div class="card shadow mb-4">
     <div class="card-header py-3">
-      <h6 class="m-0 font-weight-bold text-primary">Daftar Pemesanan</h6>
+      <div class="d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Daftar Pemesanan</h6>
+        <button
+          class="btn btn-primary"
+          data-bs-toggle="modal"
+          data-bs-target="#addBookingModal"
+        >
+          <i class="ri-add-line"></i> Tambah Pemesanan
+        </button>
+      </div>
     </div>
     <div class="card-body">
       <div class="table-responsive">
@@ -92,6 +125,7 @@
               <th>ID</th>
               <th>User</th>
               <th>Tanggal</th>
+              <th>Lapangan</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -99,26 +133,44 @@
           <tbody>
             {% for item in pemesanan %}
             <tr>
-              <td>{{ item.id }}</td>
+              <td>{{ forloop.counter }}</td>
               <td>{{ item.user.username }}</td>
               <td>{{ item.created_at|date:"d/m/Y" }}</td>
+              <td>{{ item.jadwal.lapangan.nama }}</td>
               <td>
                 <span
-                  class="badge {% if item.status == 'pending' %}bg-warning{% else %}bg-success{% endif %}"
+                  class="badge {% if item.status == 'pending' %} bg-warning {% elif item.status == 'diterima' %} bg-info {% elif item.status == 'dibatalkan' %} bg-danger {% else %} bg-success {% endif %}"
                 >
-                  {{ item.status }}
+                  {{ item.status|capfirst }}
                 </span>
               </td>
               <td>
-                <a href="#" class="btn btn-primary btn-sm">Detail</a>
-                <a href="#" class="btn btn-success btn-sm">Update</a>
+                <a
+                  href="{% url 'detail_pemesanan_staff' item.id %}"
+                  class="btn btn-primary btn-sm"
+                  >Detail</a
+                >
+                <button
+                  class="btn btn-success btn-sm update-btn"
+                  data-id="{{ item.id }}"
+                  data-status="{{ item.status }}"
+                >
+                  Update
+                </button>
               </td>
             </tr>
             {% endfor %}
           </tbody>
+          {% include '../components/pagination.html' with page_obj=pemesanan %}
         </table>
       </div>
     </div>
   </div>
+
+  <!-- update modal -->
+  {% include '../components/modal_update_pemesanan.html' %}
+
+  <!-- add modal -->
+  {% include '../components/modal_add_pemesanan.html' %}
 </div>
 {% endblock %}
