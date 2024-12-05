@@ -10,7 +10,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView , DetailView, ListView
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.core.paginator import Paginator
-from .models import CustomUser, Lapangan, Jadwal, Pemesanan
+from .models import CustomUser, Lapangan, Jadwal, Pemesanan, Ulasan
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 
 
@@ -215,23 +215,35 @@ def cancel_pemesanan(request, pemesanan_id):
 # -----STAFF-----
 @staff_member_required
 def dashboard_staff(request):
+    # pemesanan
     pemesanan_list = Pemesanan.objects.all().order_by('-created_at')
-    paginator = Paginator(pemesanan_list, 10)
-    
-    users = CustomUser.objects.filter(
-        is_staff=False,
-        is_superuser=False
-    ).order_by('username')
-    
-    lapangan = Lapangan.objects.all()
+    pemesanan_paginator = Paginator(pemesanan_list, 10)
+    pemesanan_page = request.GET.get('pemesanan_page')
+    pemesanan = pemesanan_paginator.get_page(pemesanan_page)
 
-    page = request.GET.get('page')
-    pemesanan = paginator.get_page(page)
+    # lapangan
+    lapangan_list = Lapangan.objects.all()
+    for field in lapangan_list:
+        field.average_rating = field.avg_rating()
+    lapangan_paginator = Paginator(lapangan_list, 10)
+    lapangan_page = request.GET.get('lapangan_page')
+    lapangan = lapangan_paginator.get_page(lapangan_page)
+    
+    # ulasan
+    ulasan_list = Ulasan.objects.all().order_by('-created_at')
+    ulasan_paginator = Paginator(ulasan_list, 10)
+    ulasan_page = request.GET.get('ulasan_page')
+    ulasan = ulasan_paginator.get_page(ulasan_page)
+
+    # user
+    users = CustomUser.objects.filter(is_staff=False, is_superuser=False).order_by('username')
     
     context = {
         'pemesanan': pemesanan,
         'users': users,
         'lapangan': lapangan,
+        'ulasan': ulasan,
+        'total_lapangan': lapangan_list.count(),
         'total_pemesanan': pemesanan_list.count(),
         'pending_pemesanan': pemesanan_list.filter(status='pending').count(),
         'diterima_pemesanan': pemesanan_list.filter(status='diterima').count(),
@@ -320,6 +332,17 @@ def add_pemesanan(request):
         return redirect('dashboard_staff')
     
     return HttpResponseNotAllowed(['POST'])
+    
+# hapus ulasan
+@login_required
+def delete_ulasan(request, pk): 
+    if not request.user.is_staff or request.user.is_superuser:
+        raise PermissionDenied
+    
+    ulasan = get_object_or_404(Ulasan, pk=pk)
+    ulasan.delete()
+    messages.success(request, 'Ulasan berhasil dihapus.')
+    return redirect('dashboard_staff')
     
     
 # -----ADMIN-----

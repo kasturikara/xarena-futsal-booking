@@ -21,6 +21,12 @@ class Lapangan(models.Model):
     gambar = models.ImageField(upload_to='lapangan_images/', blank=True, null=True)
     is_available = models.BooleanField(default=True)
 
+    def avg_rating(self):
+        ratings = Ulasan.objects.filter(lapangan=self).values_list('rating', flat=True)
+        if ratings:
+            return sum(ratings) / len(ratings)
+        return 0
+
     def __str__(self):
         return self.nama
 
@@ -46,7 +52,7 @@ class Ulasan(models.Model):
         help_text="User yang memberikan ulasan"
     )
     lapangan = models.ForeignKey(Lapangan, on_delete=models.CASCADE, help_text="Lapangan yang diulas")
-    rating = models.PositiveSmallIntegerField()
+    rating = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
     komentar = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

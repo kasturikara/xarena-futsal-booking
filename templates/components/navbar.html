@@ -60,6 +60,7 @@
             >About</a
           >
         </li>
+        {% if not user.is_staff and not user.is_superuser %}
         <li class="nav-item">
           <a
             class="nav-link {% if request.resolver_match.url_name == 'list_lapangan' or request.resolver_match.url_name == 'detail_lapangan' %}active{% endif %}"
@@ -67,6 +68,7 @@
             >Lapangan</a
           >
         </li>
+        {% endif %}
       </ul>
 
       <div class="d-flex gap-3 justify-content-center">

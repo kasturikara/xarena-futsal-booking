@@ -25,6 +25,7 @@ urlpatterns = [
     path('staff/pemesanan/<int:pk>/update/', views.update_pemesanan, name='update_pemesanan'),
     
     path('pemesanan/add/', views.add_pemesanan, name='add_pemesanan'),
+    path('staff/ulasan/<int:pk>/delete/', views.delete_ulasan, name='delete_ulasan'),
 
     # admin
     path('adm/dashboard/', views.dashboard_admin, name='dashboard_admin'),
