@@ -108,6 +108,17 @@ def dashboard_user(request):
     
     return render(request, 'user/dashboard_user.html', context)
 
+# detail pemesanan untuk user
+@login_required
+def detail_pemesanan_user(request, pemesanan_id):
+    if request.user.is_staff or request.user.is_superuser:
+        raise PermissionDenied
+    
+    pemesanan = get_object_or_404(Pemesanan, id=pemesanan_id, user=request.user)
+    return render(request, 'user/detail_pemesanan_user.html', {
+        'pemesanan': pemesanan
+    })
+
 # list lapangan
 class LapanganListView(ListView):
     model = Lapangan

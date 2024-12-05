@@ -18,6 +18,7 @@ urlpatterns = [
     path('pesan/<int:jadwal_id>/', views.PemesananCreateView.as_view(), name='pesan_lapangan'),
     path('konfirmasi-pemesanan/<int:jadwal_id>/', views.PemesananCreateView.as_view(), name='konfirmasi_pemesanan'),
     path('pemesanan/cancel/<int:pemesanan_id>/', views.cancel_pemesanan, name='cancel_pemesanan'),
+    path('pemesanan/<int:pemesanan_id>/', views.detail_pemesanan_user, name='detail_pemesanan_user'),
     
     # staff
     path('staff/dashboard/', views.dashboard_staff, name='dashboard_staff'),
