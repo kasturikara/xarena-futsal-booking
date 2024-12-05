@@ -14,6 +14,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard_user, name='dashboard_user'),
     path('lapangan/', views.LapanganListView.as_view(), name='list_lapangan'),
     path('lapangan/<int:lapangan_id>/', views.DetailLapanganView.as_view(), name='detail_lapangan'),
+    path('lapangan/<int:lapangan_id>/ulasan/', views.add_ulasan, name='add_ulasan'),
     
     path('pesan/<int:jadwal_id>/', views.PemesananCreateView.as_view(), name='pesan_lapangan'),
     path('konfirmasi-pemesanan/<int:jadwal_id>/', views.PemesananCreateView.as_view(), name='konfirmasi_pemesanan'),

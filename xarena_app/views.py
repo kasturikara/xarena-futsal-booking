@@ -97,7 +97,9 @@ def dashboard_user(request):
         'jadwal__lapangan'
     ).order_by('-created_at')
     
-    total = sum(pesan.hitung_harga() for pesan in pemesanan)
+    # hitung total kecuali pemesanan yang dibatalkan
+    pesanan = pemesanan.exclude(status='dibatalkan')
+    total = sum(pesan.hitung_harga() for pesan in pesanan)
     
     context = {
         'pemesanan': pemesanan,
@@ -221,7 +223,40 @@ def cancel_pemesanan(request, pemesanan_id):
         
     return render(request, 'user/konfirmasi_cancel_pemesanan.html', {'pemesanan': pemesanan})
 
+# add ulasan
+@login_required
+def add_ulasan(request, lapangan_id):
+    if request.method == 'POST':
+        lapangan = get_object_or_404(Lapangan, id=lapangan_id)
+        
+        # cek apakah user sudah pernah memberikan ulasan untuk lapangan ini
+        if Ulasan.objects.filter(user=request.user, lapangan=lapangan).exists():
+            messages.error(request, 'Anda sudah memberikan ulasan untuk lapangan ini.')
+            return redirect('detail_lapangan', lapangan_id=lapangan_id)
+        
+        rating = request.POST.get('rating')
+        komentar = request.POST.get('komentar')
+        
+        # validasi rating
+        try:
+            rating = int(rating)
+            if rating < 1 or rating > 5:
+                raise ValueError('Rating harus diantara 1-5')
+        except ValueError as e:
+            messages.error(request, str(e))
+            return redirect('detail_lapangan', lapangan_id=lapangan_id)
+        
+        ulasan = Ulasan.objects.create(
+            user=request.user,
+            lapangan=lapangan,
+            rating=rating,
+            komentar=komentar
+        )
 
+        messages.success(request, 'Terima kasih atas ulasan Anda.')
+        return redirect('detail_lapangan', lapangan_id=lapangan_id)
+
+    return HttpResponseNotAllowed(['POST'])
 
 # -----STAFF-----
 @staff_member_required
